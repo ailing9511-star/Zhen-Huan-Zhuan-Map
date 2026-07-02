@@ -1,0 +1,1223 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>甄嬛传后宫人物星图</title>
+  <style>
+    :root {
+      --bg: #050506;
+      --ink: #f3eee2;
+      --muted: #a9a092;
+      --line: rgba(255, 255, 255, 0.13);
+      --panel: rgba(8, 9, 11, 0.76);
+      --panel-strong: rgba(10, 11, 13, 0.92);
+      --gold: #d8b45f;
+      --jade: #75c9b3;
+      --rose: #d97984;
+      --cyan: #73b9d7;
+      --violet: #a993df;
+      --red: #d26050;
+      --amber: #d79a55;
+      font-family: "Songti SC", "STSong", "Noto Serif SC", serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: var(--bg);
+      color: var(--ink);
+    }
+
+    body {
+      background:
+        radial-gradient(circle at 48% 48%, rgba(126, 82, 44, 0.13), transparent 32%),
+        radial-gradient(circle at 66% 38%, rgba(76, 113, 136, 0.1), transparent 28%),
+        radial-gradient(circle at 35% 58%, rgba(118, 65, 89, 0.08), transparent 30%),
+        #050506;
+    }
+
+    canvas {
+      position: fixed;
+      inset: 0;
+      display: block;
+      width: 100%;
+      height: 100%;
+      cursor: grab;
+    }
+
+    canvas.dragging { cursor: grabbing; }
+
+    .topbar {
+      position: fixed;
+      top: 16px;
+      left: 50%;
+      z-index: 12;
+      width: min(1040px, calc(100vw - 24px));
+      transform: translateX(-50%);
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      gap: 14px;
+      align-items: start;
+      pointer-events: none;
+    }
+
+    .hint {
+      justify-self: start;
+      margin-top: 6px;
+      color: rgba(243, 238, 226, 0.56);
+      font: 12px/1.5 system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+      letter-spacing: 0;
+      pointer-events: none;
+    }
+
+    .title-card {
+      min-width: 294px;
+      padding: 12px 16px 14px;
+      border: 1px solid rgba(216, 180, 95, 0.28);
+      border-radius: 8px;
+      background: rgba(7, 7, 8, 0.72);
+      box-shadow: 0 18px 60px rgba(0, 0, 0, 0.42), inset 0 0 22px rgba(216, 180, 95, 0.06);
+      text-align: center;
+      pointer-events: auto;
+      backdrop-filter: blur(10px);
+    }
+
+    h1 {
+      margin: 0 0 10px;
+      font-size: 28px;
+      line-height: 1.05;
+      letter-spacing: 0;
+    }
+
+    .tabs {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 7px;
+      max-width: 420px;
+    }
+
+    button, input {
+      font: 600 13px/1 system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+
+    .tab, .pill, .icon-btn, .search input {
+      min-height: 34px;
+      border: 1px solid rgba(255, 255, 255, 0.13);
+      border-radius: 999px;
+      background: rgba(9, 10, 12, 0.7);
+      color: var(--muted);
+      outline: none;
+    }
+
+    .tab {
+      padding: 0 12px;
+      cursor: pointer;
+    }
+
+    .tab.active, .pill.active {
+      color: #2d220b;
+      border-color: rgba(248, 221, 139, 0.68);
+      background: linear-gradient(180deg, #f0d47c, #b88631);
+      box-shadow: 0 0 20px rgba(216, 180, 95, 0.28);
+    }
+
+    .search {
+      justify-self: end;
+      position: relative;
+      width: min(290px, 30vw);
+      pointer-events: auto;
+    }
+
+    .search input {
+      width: 100%;
+      color: var(--ink);
+      background: rgba(8, 9, 11, 0.78);
+      padding: 0 16px;
+      backdrop-filter: blur(8px);
+    }
+
+    .search input::placeholder { color: rgba(243, 238, 226, 0.45); }
+
+    .suggest {
+      position: absolute;
+      top: 42px;
+      right: 0;
+      display: none;
+      width: min(360px, 88vw);
+      max-height: 330px;
+      overflow: auto;
+      border: 1px solid rgba(255, 255, 255, 0.13);
+      border-radius: 8px;
+      background: var(--panel-strong);
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.45);
+    }
+
+    .suggest button {
+      width: 100%;
+      padding: 10px 12px;
+      border: 0;
+      color: var(--ink);
+      background: transparent;
+      text-align: left;
+      cursor: pointer;
+    }
+
+    .suggest strong {
+      display: block;
+      margin-bottom: 4px;
+      font-weight: 650;
+    }
+
+    .suggest button:hover { background: rgba(216, 180, 95, 0.12); }
+    .suggest small { display: block; color: var(--muted); }
+
+    .panel {
+      position: fixed;
+      top: 108px;
+      right: 16px;
+      bottom: 132px;
+      z-index: 10;
+      width: 354px;
+      max-width: calc(100vw - 32px);
+      padding: 18px;
+      border: 1px solid rgba(255, 255, 255, 0.13);
+      border-radius: 8px;
+      background: var(--panel);
+      box-shadow: 0 24px 70px rgba(0, 0, 0, 0.46);
+      backdrop-filter: blur(12px);
+      transform: translateX(390px);
+      opacity: 0;
+      transition: transform 240ms ease, opacity 240ms ease;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+
+    .panel.open {
+      transform: translateX(0);
+      opacity: 1;
+    }
+
+    .panel-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      padding-bottom: 13px;
+      margin-bottom: 12px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .panel h2 {
+      margin: 0 0 7px;
+      font: 700 28px/1.1 "Songti SC", "STSong", serif;
+    }
+
+    .panel p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.65;
+    }
+
+    .close {
+      flex: 0 0 auto;
+      width: 30px;
+      height: 30px;
+      padding: 0;
+      border: 1px solid rgba(255, 255, 255, 0.13);
+      border-radius: 50%;
+      color: var(--muted);
+      background: rgba(0, 0, 0, 0.22);
+      cursor: pointer;
+    }
+
+    .badge-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 7px;
+      margin-bottom: 12px;
+    }
+
+    .badge {
+      padding: 5px 8px;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 999px;
+      color: rgba(243, 238, 226, 0.82);
+      background: rgba(255, 255, 255, 0.05);
+      font-size: 12px;
+    }
+
+    .section-title {
+      margin: 15px 0 8px;
+      color: var(--gold);
+      font: 700 13px/1 system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+
+    .rel-list {
+      display: grid;
+      gap: 8px;
+      max-height: min(280px, 36vh);
+      overflow: auto;
+      padding-right: 4px;
+    }
+
+    .rel-item {
+      padding: 4px 0 4px 10px;
+      border-left: 2px solid rgba(216, 180, 95, 0.45);
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.55;
+    }
+
+    .rel-item b { color: var(--ink); font-weight: 650; }
+
+    .tooltip {
+      position: fixed;
+      z-index: 20;
+      display: none;
+      max-width: 260px;
+      padding: 8px 10px;
+      border: 1px solid rgba(255, 255, 255, 0.13);
+      border-radius: 8px;
+      color: var(--ink);
+      background: rgba(6, 7, 9, 0.9);
+      box-shadow: 0 14px 42px rgba(0, 0, 0, 0.45);
+      pointer-events: none;
+      font: 12px/1.55 system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+
+    .bottom {
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      z-index: 9;
+      min-height: 118px;
+      padding: 16px clamp(14px, 3vw, 40px) 18px;
+      display: grid;
+      grid-template-columns: minmax(280px, 1fr) auto minmax(250px, 1fr);
+      gap: 18px;
+      align-items: end;
+      background: linear-gradient(180deg, transparent, rgba(0, 0, 0, 0.72) 24%, rgba(0, 0, 0, 0.93));
+      pointer-events: none;
+    }
+
+    .important, .controls, .stats { pointer-events: auto; }
+
+    .important {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 7px 14px;
+      font: 13px/1.35 system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+      color: var(--muted);
+    }
+
+    .important button {
+      min-width: 0;
+      padding: 0;
+      border: 0;
+      color: inherit;
+      background: transparent;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      text-align: left;
+      cursor: pointer;
+    }
+
+    .important span:last-child {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .dot {
+      width: 7px;
+      height: 7px;
+      flex: 0 0 auto;
+      border-radius: 50%;
+      box-shadow: 0 0 12px currentColor;
+    }
+
+    .controls {
+      justify-self: center;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 9px;
+      max-width: 420px;
+    }
+
+    .pill {
+      padding: 0 14px;
+      cursor: pointer;
+      background: rgba(13, 14, 16, 0.78);
+    }
+
+    .stats {
+      justify-self: end;
+      min-width: 230px;
+      display: grid;
+      gap: 6px;
+      color: var(--muted);
+      font: 13px/1.45 system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+
+    .stat-line {
+      display: flex;
+      justify-content: space-between;
+      gap: 18px;
+      padding-bottom: 5px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .stat-line strong { color: var(--ink); font-weight: 650; }
+
+    @media (max-width: 780px) {
+      .topbar {
+        top: 10px;
+        grid-template-columns: 1fr;
+        justify-items: center;
+        gap: 9px;
+      }
+
+      .hint { display: none; }
+
+      .title-card {
+        width: min(430px, calc(100vw - 24px));
+        min-width: 0;
+      }
+
+      h1 { font-size: 24px; }
+
+      .search {
+        justify-self: center;
+        width: min(430px, calc(100vw - 24px));
+      }
+
+      .panel {
+        top: 150px;
+        right: 10px;
+        bottom: 138px;
+        width: calc(100vw - 20px);
+      }
+
+      .bottom {
+        grid-template-columns: 1fr;
+        min-height: 132px;
+        gap: 10px;
+        padding: 12px 12px 14px;
+      }
+
+      .important {
+        order: 2;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        font-size: 12px;
+      }
+
+      .stats { display: none; }
+      .pill, .tab { font-size: 12px; padding-inline: 10px; }
+    }
+  </style>
+</head>
+<body>
+  <canvas id="sky" aria-label="甄嬛传后宫人物关系星图"></canvas>
+
+  <header class="topbar">
+    <div class="hint">拖拽旋转 · 滚轮缩放 · 点击星点查看详情</div>
+    <div class="title-card">
+      <h1>甄嬛传后宫人物星图</h1>
+      <div id="tabs" class="tabs"></div>
+    </div>
+    <div class="search">
+      <input id="search" autocomplete="off" placeholder="搜索姓名、位份、阵营、职位、称号..." />
+      <div id="suggest" class="suggest"></div>
+    </div>
+  </header>
+
+  <aside id="panel" class="panel">
+    <div class="panel-head">
+      <div>
+        <h2 id="pName">甄嬛</h2>
+        <p id="pSub">莞嫔 · 甄嬛一脉</p>
+      </div>
+      <button id="closePanel" class="close" aria-label="关闭">×</button>
+    </div>
+    <div id="pBadges" class="badge-row"></div>
+    <p id="pBio"></p>
+    <div class="section-title">主要人物关系</div>
+    <div id="pRelations" class="rel-list"></div>
+  </aside>
+
+  <div id="tooltip" class="tooltip"></div>
+
+  <footer class="bottom">
+    <div id="important" class="important"></div>
+    <div class="controls">
+      <button id="autoBtn" class="pill active">停止旋转</button>
+      <button id="layoutBtn" class="pill">分层布局</button>
+      <button id="resetBtn" class="pill">显示全部</button>
+    </div>
+    <div class="stats">
+      <div class="stat-line"><span>节点</span><strong id="nodeCount">0</strong></div>
+      <div class="stat-line"><span>关系</span><strong id="edgeCount">0</strong></div>
+      <div class="stat-line"><span>当前焦点</span><strong id="focusName">甄嬛</strong></div>
+    </div>
+  </footer>
+
+  <script>
+    const palette = {
+      core: '#f6e5aa',
+      emperor: '#d8b45f',
+      empress: '#d97984',
+      hua: '#d26050',
+      an: '#a993df',
+      prince: '#75c9b3',
+      doctor: '#73b9d7',
+      court: '#b7c1d6',
+      servant: '#8fc4a2',
+      palace: '#d79a55',
+      neutral: '#9da7bb'
+    };
+
+    const nodes = [
+      ['zhenhuan','甄嬛','莞莞 / 熹贵妃','甄嬛一脉','熹贵妃','核心主角','钮祜禄氏，入宫后从莞常在一路沉浮，最终成为后宫权力核心。','后宫妃嫔','永寿宫','贵妃',10],
+      ['emperor','皇帝','胤禛','皇权中枢','皇帝','君主','大清皇帝，后宫与朝堂关系网络的最高权力中心。','皇族','养心殿','皇帝',10],
+      ['meizhuang','沈眉庄','惠贵人 / 惠嫔','甄嬛一脉','惠贵人','知己姐妹','甄嬛挚友，端庄自持，因假孕受挫后与温实初相知。','后宫妃嫔','存菊堂','嫔妃',9],
+      ['empress','皇后','乌拉那拉宜修','皇后一党','皇后','中宫','中宫皇后，擅长以礼法和布局维持后位。','后宫主位','景仁宫','皇后',10],
+      ['huafei','华妃','年世兰','华妃一党','华妃','宠妃','年羹尧之妹，宠冠六宫，骄矜强势。','后宫主位','翊坤宫','妃位',10],
+      ['anlingrong','安陵容','安小主 / 鹂妃','安陵容线','鹂妃','复杂盟友','出身寒微，擅歌与调香，后与甄嬛渐行渐远。','后宫妃嫔','延禧宫','妃位',9],
+      ['guojunwang','果郡王','允礼','果郡王线','亲王','宗室知己','温润宗室，与甄嬛有生死相托的隐秘情感。','皇族宗室','清凉台','亲王',9],
+      ['wenshichu','温实初','温太医','太医院','太医','医者知己','太医院医官，自幼倾心甄嬛，守护甄嬛与沈眉庄。','太医','太医院','医官',9],
+      ['taohou','太后','乌雅氏','太后宗室','太后','宫廷长辈','皇帝生母，重视宗法与后宫平衡。','皇族长辈','寿康宫','太后',8],
+      ['duanfei','端妃','齐月宾','甄嬛一脉','端妃','清醒盟友','久病失宠，深知华妃旧事，后与甄嬛相互借力。','后宫主位','延庆殿','妃位',8],
+      ['jingfei','敬妃','冯若昭','甄嬛一脉','敬妃','稳健盟友','沉稳谨慎，抚养胧月，后与甄嬛结盟。','后宫主位','咸福宫','妃位',8],
+      ['qifei','齐妃','李静言','皇后一党','齐妃','皇子生母','三阿哥生母，性情浅直，常受皇后利用。','后宫主位','长春宫','妃位',7],
+      ['fucha','富察贵人','富察仪欣','皇后一党','富察贵人','嫔妃','满洲贵女，曾因有孕被卷入后宫争斗。','后宫妃嫔','延禧宫','贵人',6],
+      ['caigui','曹贵人','曹琴默','华妃一党','曹贵人','谋士妃嫔','温宜公主生母，依附华妃却暗藏自保心机。','后宫妃嫔','翊坤宫','贵人',8],
+      ['lixi','丽嫔','费云烟','华妃一党','丽嫔','宠妃党羽','华妃党羽，言行张扬，后因惊惧失势。','后宫妃嫔','启祥宫','嫔位',6],
+      ['xinpin','欣贵人','吕盈风','甄嬛一脉','欣贵人','旁观盟友','在后宫中谨慎求存，后期倾向甄嬛一侧。','后宫妃嫔','储秀宫','贵人',6],
+      ['ye','叶澜依','宁嫔','果郡王线','宁嫔','孤傲嫔妃','驯马女出身，爱慕果郡王，对皇帝冷淡。','后宫妃嫔','春禧殿','嫔位',8],
+      ['yurao','玉娆','甄玉娆','甄嬛一脉','慎郡王福晋','甄氏妹妹','甄嬛妹妹，明艳聪慧，最终嫁予慎郡王。','官宦女眷','甄府','宗室福晋',7],
+      ['huanbi','浣碧','钮祜禄玉隐','甄嬛一脉','侧福晋','甄嬛妹妹','甄嬛异母妹，起初为侍女，后嫁果郡王。','侍女 / 宗室女眷','碎玉轩','侧福晋',8],
+      ['liuzhu','流朱','流朱','甄嬛一脉','侍女','忠仆','甄嬛贴身侍女，活泼忠烈，为救主牺牲。','宫女','碎玉轩','侍女',8],
+      ['jinxi','崔槿汐','槿汐姑姑','甄嬛一脉','掌事姑姑','掌事宫女','甄嬛身边最稳重的掌事姑姑，深谙宫中规则。','宫女','碎玉轩 / 永寿宫','掌事',9],
+      ['sujin','苏培盛','苏公公','皇权中枢','御前太监','内廷总管','皇帝身边最重要的太监，通晓御前风向。','太监','养心殿','总管太监',8],
+      ['jianqiu','剪秋','剪秋姑姑','皇后一党','掌事姑姑','皇后心腹','皇后身边的贴身姑姑，执行中宫密令。','宫女','景仁宫','掌事',8],
+      ['songzhi','颂芝','颂芝','华妃一党','侍女','华妃心腹','华妃贴身侍女，随主荣辱。','宫女','翊坤宫','侍女',7],
+      ['baojuan','宝鹃','宝鹃','安陵容线','侍女','安陵容侍女','安陵容身边侍女，见证其敏感与挣扎。','宫女','延禧宫','侍女',6],
+      ['xiaoyunzi','小允子','小允子','甄嬛一脉','太监','碎玉轩太监','甄嬛身边机灵太监，多次传递消息。','太监','碎玉轩','太监',7],
+      ['kangluhai','康禄海','康禄海','宫人太监','太监','势利宫人','碎玉轩太监，甄嬛失宠时背主另投。','太监','碎玉轩','太监',5],
+      ['jiangfuhai','江福海','江福海','皇后一党','太监','皇后宫人','景仁宫太监，皇后身边办事者。','太监','景仁宫','太监',6],
+      ['zhou ninghai','周宁海','周宁海','华妃一党','太监','翊坤宫太监','华妃身边太监，协助华妃威压后宫。','太监','翊坤宫','太监',6],
+      ['maopei','毛佩兰','毛答应','后宫嫔妃','答应','低位嫔妃','后宫低位嫔妃，处在权力边缘。','后宫妃嫔','储秀宫','答应',3],
+      ['fangchunyi','方淳意','淳常在','甄嬛一脉','常在','天真嫔妃','天真烂漫，亲近甄嬛，死于后宫暗流。','后宫妃嫔','碎玉轩','常在',7],
+      ['yuying','余莺儿','余答应','皇权中枢','答应','倚宠生骄','倚梅园冒名得宠，后因跋扈和欺瞒失势。','宫女 / 嫔妃','钟粹宫','答应',6],
+      ['xia','夏冬春','夏常在','皇后一党','常在','新入宫嫔妃','出身骄矜，入宫初期得罪华妃。','后宫妃嫔','储秀宫','常在',5],
+      ['qigui','祺贵人','瓜尔佳文鸳','皇后一党','祺贵人','构陷者','瓜尔佳氏，后期受皇后利用构陷甄嬛。','后宫妃嫔','储秀宫','贵人',7],
+      ['ying','瑛贵人','采蘋','皇权中枢','瑛贵人','悲剧嫔妃','果郡王府旧人，入宫后卷入三阿哥风波。','王府旧人 / 嫔妃','圆明园','贵人',6],
+      ['mengjingxian','孟静娴','沛国公之女','果郡王线','嫡福晋','果郡王福晋','出身高门，嫁果郡王，温柔隐忍。','宗室女眷','果郡王府','嫡福晋',6],
+      ['shenbeile','慎郡王','允禧','太后宗室','郡王','宗室','宗室亲王，最终迎娶甄玉娆。','皇族宗室','慎郡王府','郡王',5],
+      ['longyue','胧月公主','胧月','甄嬛一脉','公主','甄嬛之女','甄嬛与皇帝之女，幼年由敬妃抚养。','皇族子女','咸福宫','公主',7],
+      ['hongyan','弘曕','六阿哥','甄嬛一脉','皇子','甄嬛之子','甄嬛之子，身世牵动全局。','皇族子女','永寿宫','皇子',7],
+      ['lingshi','灵犀公主','灵犀','甄嬛一脉','公主','甄嬛之女','甄嬛之女，果郡王线的重要牵连。','皇族子女','永寿宫','公主',6],
+      ['wenyi','温宜公主','温宜','华妃一党','公主','曹贵人之女','曹贵人之女，曾被华妃用作争宠筹码。','皇族子女','翊坤宫','公主',6],
+      ['sanage','三阿哥','弘时','皇后一党','皇子','齐妃之子','齐妃之子，曾被皇后扶持为夺嫡棋子。','皇族子女','长春宫','皇子',7],
+      ['siage','四阿哥','弘历','甄嬛一脉','皇子','养子','不受重视的皇子，后被甄嬛扶持。','皇族子女','圆明园','皇子',7],
+      ['nian','年羹尧','年大将军','华妃一党','大将军','外戚权臣','华妃兄长，军功显赫，是华妃得势根基。','朝臣','前朝','将军',8],
+      ['longkodo','隆科多','佟佳隆科多','太后宗室','重臣','外戚权臣','朝中重臣，与太后旧情和皇权交接有关。','朝臣','前朝','大臣',7],
+      ['zhendao','甄远道','甄大人','甄嬛一脉','大臣','甄嬛父亲','甄嬛之父，官场浮沉牵动甄氏一族。','朝臣','甄府','大臣',7],
+      ['zhenmu','甄夫人','甄夫人','甄嬛一脉','夫人','甄嬛母亲','甄嬛母亲，温厚端方。','官眷','甄府','夫人',5],
+      ['guarjia','瓜尔佳鄂敏','鄂敏','皇后一党','大臣','祺贵人父亲','瓜尔佳氏朝臣，涉及构陷甄氏。','朝臣','前朝','大臣',6],
+      ['motai','摩格可汗','摩格','前朝外部','可汗','准噶尔首领','外部势力首领，觐见时牵动甄嬛旧事。','外部势力','准噶尔','可汗',5],
+      ['zhangtingyu','张廷玉','张大人','前朝','大臣','朝臣','前朝重臣，代表朝堂秩序。','朝臣','前朝','大臣',4],
+      ['eershi','鄂尔泰','鄂大人','前朝','大臣','朝臣','前朝大臣，参与朝政议事。','朝臣','前朝','大臣',4],
+      ['guominjun','郭郡王福晋','福晋','太后宗室','福晋','宗室女眷','宗室女眷，维系王府与宫廷礼法。','宗室女眷','王府','福晋',3],
+      ['feiyanggu','费扬古','费扬古','前朝','大臣','朝臣','乌拉那拉氏家族关联人物。','朝臣','前朝','大臣',3],
+      ['chunyuan','纯元皇后','朱柔则','皇后一党','故皇后','白月光','已故皇后，影响皇帝、皇后和甄嬛命运。','后宫旧影','紫禁城记忆','皇后',8],
+      ['ganlu','莫言','莫言师太','甘露寺','师太','甘露寺长辈','甘露寺中照看修行女眷的师太。','佛寺人物','甘露寺','师太',5],
+      ['jingbai','静白','静白师太','甘露寺','师太','刁难者','甘露寺师太，曾刁难失势后的甄嬛。','佛寺人物','甘露寺','师太',6],
+      ['jingan','静岸','静岸师太','甘露寺','师太','佛寺人物','甘露寺人物，见证甄嬛出宫后的低谷。','佛寺人物','甘露寺','师太',3],
+      ['akeyun','阿晋','阿晋','果郡王线','随从','果郡王随从','果郡王身边忠心随从。','王府随从','果郡王府','随从',6],
+      ['peier','佩儿','佩儿','甄嬛一脉','侍女','宫女','后期在甄嬛身边侍奉。','宫女','永寿宫','侍女',4],
+      ['juxiang','菊青','菊青','甄嬛一脉','侍女','沈眉庄侍女','沈眉庄身边宫女。','宫女','存菊堂','侍女',4],
+      ['caiyue','采月','采月','甄嬛一脉','侍女','敬妃侍女','敬妃身边宫女，照料咸福宫事务。','宫女','咸福宫','侍女',3],
+      ['ruyi','如意','如意','华妃一党','侍女','宫女','翊坤宫宫女，随华妃起落。','宫女','翊坤宫','侍女',3],
+      ['fuzhi','福子','福子','华妃一党','宫女','悲剧宫女','被皇后赐给华妃的宫女，死于后宫威压。','宫女','翊坤宫','宫女',5],
+      ['fangruo','芳若','芳若姑姑','皇权中枢','掌事姑姑','教引姑姑','宫中教引姑姑，负责新入宫小主礼仪。','宫女','内务府','掌事',5],
+      ['zhuxi','竹息','竹息姑姑','太后宗室','掌事姑姑','太后心腹','太后身边掌事姑姑。','宫女','寿康宫','掌事',6],
+      ['wei lin','卫临','卫太医','太医院','太医','太医','温实初后辈，后期协助甄嬛一脉。','太医','太医院','医官',6],
+      ['jiangcheng','江诚','江太医','太医院','太医','太医','太医院医官，卷入后宫医药线索。','太医','太医院','医官',4],
+      ['zhangmingshi','章弥','章太医','太医院','太医','太医','资深太医，诊脉与宫廷医案相关。','太医','太医院','医官',4],
+      ['liuben','刘畚','刘太医','华妃一党','太医','涉案太医','与华妃假孕案、药物线索相关的太医。','太医','太医院','医官',6],
+      ['songzhi2','小厦子','小厦子','皇权中枢','太监','御前太监','苏培盛身边小太监，传递御前讯息。','太监','养心殿','太监',5],
+      ['xiaoyinzi','小印子','小印子','宫人太监','太监','宫中太监','宫中低阶太监，负责跑腿传话。','太监','内廷','太监',3],
+      ['huangguisu','黄规全','黄规全','宫人太监','总管','内务府总管','内务府相关人物，掌管宫中供应。','太监','内务府','总管',4],
+      ['jiangzhongmin','姜忠敏','姜忠敏','前朝','大臣','朝臣','前朝官员，涉及朝政背景。','朝臣','前朝','大臣',3],
+      ['shunchang','顺常在','顺常在','后宫嫔妃','常在','嫔妃','后宫低位嫔妃，参与请安场景。','后宫妃嫔','储秀宫','常在',3],
+      ['qingchang','庆贵人','庆贵人','后宫嫔妃','贵人','嫔妃','后宫嫔妃，宫中权势边缘人物。','后宫妃嫔','储秀宫','贵人',3],
+      ['xiangpin','祥嫔','祥嫔','后宫嫔妃','嫔','嫔妃','后宫嫔妃，作为六宫群像存在。','后宫妃嫔','钟粹宫','嫔位',3],
+      ['wanpin','莞贵人','莞贵人时期','甄嬛一脉','贵人','身份阶段','甄嬛早期得宠阶段的身份节点。','身份阶段','碎玉轩','贵人',4],
+      ['niuhulu','钮祜禄甄嬛','熹妃归来','甄嬛一脉','熹妃','身份阶段','甄嬛回宫后的新身份，象征权力重塑。','身份阶段','永寿宫','妃位',5],
+      ['suiyuxuan','碎玉轩','碎玉轩','宫殿对象','宫殿','居所','甄嬛初入宫居所，许多早期关系由此展开。','宫殿','紫禁城','宫殿',5],
+      ['yongshou','永寿宫','永寿宫','宫殿对象','宫殿','居所','甄嬛回宫后居所，后期权力中心。','宫殿','紫禁城','宫殿',5],
+      ['jingren','景仁宫','景仁宫','宫殿对象','宫殿','中宫','皇后居所，中宫权力象征。','宫殿','紫禁城','宫殿',5],
+      ['yikun','翊坤宫','翊坤宫','宫殿对象','宫殿','华妃居所','华妃居所，曾是后宫威势最盛之处。','宫殿','紫禁城','宫殿',5],
+      ['yanxi','延禧宫','延禧宫','宫殿对象','宫殿','居所','安陵容等人居住相关宫殿。','宫殿','紫禁城','宫殿',4],
+      ['xianfu','咸福宫','咸福宫','宫殿对象','宫殿','居所','敬妃居所，胧月成长之地。','宫殿','紫禁城','宫殿',4],
+      ['ganlusi','甘露寺','甘露寺','宫殿对象','寺院','出宫之地','甄嬛离宫修行之地，也是命运转折点。','佛寺','宫外','寺院',5],
+      ['yuanmingyuan','圆明园','圆明园','宫殿对象','园林','行宫','避暑与行宫场景，连接后宫和宗室线索。','园林','京郊','行宫',4],
+      ['qianqing','养心殿','养心殿','宫殿对象','宫殿','御前','皇帝处理政务与召见嫔妃的核心空间。','宫殿','紫禁城','宫殿',5],
+      ['shoukang','寿康宫','寿康宫','宫殿对象','宫殿','太后居所','太后居所，宗法权威所在。','宫殿','紫禁城','宫殿',4],
+      ['huanyixiang','欢宜香','欢宜香','关键物件','香料','药物线索','华妃长期使用的香，隐藏不能有孕的真相。','物件','翊坤宫','香料',7],
+      ['shuhen','舒痕胶','舒痕胶','关键物件','药膏','药物线索','安陵容赠予祺贵人的药膏，牵动构陷线索。','物件','延禧宫','药物',5],
+      ['shexiang','麝香','麝香','关键物件','药材','后宫暗线','后宫争斗中常见的伤孕药物线索。','物件','太医院','药材',5],
+      ['meizhuangfather','沈自山','沈大人','甄嬛一脉','大臣','沈眉庄父亲','沈眉庄父亲，代表沈氏家族背景。','朝臣','前朝','大臣',4],
+      ['anbihuai','安比槐','安大人','安陵容线','县丞','安陵容父亲','安陵容父亲，寒微出身与家族压力的来源。','地方官','松阳县','官员',4],
+      ['anmu','安母','安母','安陵容线','母亲','安陵容母亲','安陵容母亲，长期受家中轻视。','民间女眷','安府','母亲',3],
+      ['niangniang_a','贞嫔','贞嫔','后宫嫔妃','嫔','嫔妃','后宫群像人物，处于权力网络外围。','后宫妃嫔','储秀宫','嫔位',2],
+      ['niangniang_b','康常在','康常在','后宫嫔妃','常在','嫔妃','后宫群像人物，参与请安与宫廷议论。','后宫妃嫔','钟粹宫','常在',2],
+      ['niangniang_c','瑞贵人','瑞贵人','后宫嫔妃','贵人','嫔妃','后宫群像人物，连接六宫日常。','后宫妃嫔','储秀宫','贵人',2],
+      ['niangniang_d','恬嫔','恬嫔','后宫嫔妃','嫔','嫔妃','后宫群像人物，处于主要斗争之外。','后宫妃嫔','延禧宫','嫔位',2],
+      ['niangniang_e','怡贵人','怡贵人','后宫嫔妃','贵人','嫔妃','后宫群像人物，增强六宫关系密度。','后宫妃嫔','长春宫','贵人',2],
+      ['niangniang_f','芳贵人','芳贵人','后宫嫔妃','贵人','嫔妃','后宫群像人物，参与后宫礼仪场景。','后宫妃嫔','启祥宫','贵人',2],
+      ['niangniang_g','宁常在','宁常在','后宫嫔妃','常在','嫔妃','后宫群像人物，处于边缘层。','后宫妃嫔','储秀宫','常在',2],
+      ['gongnv_a','小福子','小福子','宫人太监','宫女','宫女','内廷宫女，连接宫中日常事务。','宫女','内廷','宫女',2],
+      ['gongnv_b','小禄子','小禄子','宫人太监','太监','太监','内廷太监，承担跑腿传话。','太监','内廷','太监',2],
+      ['gongnv_c','小顺子','小顺子','宫人太监','太监','太监','内廷太监，连接御前与六宫。','太监','内廷','太监',2],
+      ['gongnv_d','银屏','银屏','宫人太监','宫女','宫女','宫中宫女，形成后宫人事网络。','宫女','内廷','宫女',2],
+      ['gongnv_e','翠果','翠果','宫人太监','宫女','宫女','宫中宫女，连接低位嫔妃生活。','宫女','储秀宫','宫女',2],
+      ['gongnv_f','翠缕','翠缕','宫人太监','宫女','宫女','宫中宫女，形成外围关系星点。','宫女','钟粹宫','宫女',2],
+      ['gongnv_g','碧桃','碧桃','宫人太监','宫女','宫女','宫中宫女，参与后宫日常。','宫女','长春宫','宫女',2],
+      ['gongnv_h','香云','香云','宫人太监','宫女','宫女','宫中宫女，连接宫殿与主位。','宫女','启祥宫','宫女',2],
+      ['gongnv_i','瑞珠','瑞珠','宫人太监','宫女','宫女','宫中宫女，连接内廷消息。','宫女','内廷','宫女',2],
+      ['gongnv_j','玉钏','玉钏','宫人太监','宫女','宫女','宫中宫女，处于外围关系网络。','宫女','内廷','宫女',2],
+      ['chai','采星','采星','宫人太监','宫女','宫女','宫中宫女，补足后宫群像。','宫女','内廷','宫女',2],
+      ['qiu','秋纹','秋纹','宫人太监','宫女','宫女','宫中宫女，补足后宫群像。','宫女','内廷','宫女',2],
+      ['xue','雪雁','雪雁','宫人太监','宫女','宫女','宫中宫女，补足后宫群像。','宫女','内廷','宫女',2],
+      ['lan','兰佩','兰佩','宫人太监','宫女','宫女','宫中宫女，补足后宫群像。','宫女','内廷','宫女',2],
+      ['yun','云辛萝','云辛萝','宫人太监','宫女','宫女','宫中宫女，补足后宫群像。','宫女','内廷','宫女',2]
+    ].map(([id, name, alias, category, rank, role, bio, identity, palace, position, importance]) => ({
+      id, name, alias, category, rank, role, bio, identity, palace, position, importance
+    }));
+
+    const edges = [
+      ['zhenhuan','emperor','夫妻 / 宠爱','选秀入宫后由莞常在至熹贵妃'],
+      ['zhenhuan','meizhuang','姐妹知己','入宫相扶，患难与共'],
+      ['zhenhuan','anlingrong','姐妹转敌','同批入宫，后因猜忌与利用决裂'],
+      ['zhenhuan','empress','阵营敌对','中宫与熹贵妃的长期权力对抗'],
+      ['zhenhuan','huafei','敌对','早期受华妃威压，后参与扳倒年氏'],
+      ['zhenhuan','guojunwang','知己 / 隐秘情感','甘露寺与清凉台线索'],
+      ['zhenhuan','wenshichu','青梅旧识','温实初长期守护甄嬛'],
+      ['zhenhuan','duanfei','政治盟友','共同揭开华妃旧事'],
+      ['zhenhuan','jingfei','盟友','胧月抚养与后期结盟'],
+      ['zhenhuan','huanbi','姐妹 / 主仆','浣碧身份转折与果郡王线'],
+      ['zhenhuan','liuzhu','主仆','流朱为救甄嬛牺牲'],
+      ['zhenhuan','jinxi','主仆 / 心腹','槿汐辅佐甄嬛回宫夺势'],
+      ['zhenhuan','xiaoyunzi','主仆','碎玉轩太监忠心护主'],
+      ['zhenhuan','yurao','姐妹','甄氏姐妹'],
+      ['zhenhuan','longyue','母女','胧月公主为甄嬛亲女'],
+      ['zhenhuan','hongyan','母子','六阿哥关联后期权力'],
+      ['zhenhuan','lingshi','母女','灵犀公主牵动果郡王隐线'],
+      ['zhenhuan','siage','扶持','后期扶持四阿哥弘历'],
+      ['zhenhuan','zhendao','父女','甄氏家族荣辱牵动甄嬛命运'],
+      ['zhenhuan','zhenmu','母女','甄夫人是甄嬛母亲'],
+      ['zhenhuan','ganlu','佛寺照应','甘露寺出宫修行'],
+      ['zhenhuan','jingbai','冲突','甘露寺中受静白刁难'],
+      ['zhenhuan','akeyun','王府线索','果郡王随从传递关键消息'],
+      ['zhenhuan','peier','主仆','永寿宫侍奉'],
+      ['zhenhuan','niuhulu','身份转折','回宫后改姓钮祜禄氏'],
+      ['zhenhuan','wanpin','身份阶段','早期莞贵人身份'],
+      ['zhenhuan','suiyuxuan','居所','初入宫居于碎玉轩'],
+      ['zhenhuan','yongshou','居所','回宫后居永寿宫'],
+      ['zhenhuan','ganlusi','命运转折','离宫修行之地'],
+      ['emperor','empress','夫妻 / 权力制衡','皇帝与中宫皇后'],
+      ['emperor','huafei','宠妃','华妃曾宠冠六宫'],
+      ['emperor','meizhuang','夫妻 / 失宠','假孕事件后疏离'],
+      ['emperor','anlingrong','夫妻 / 利用','安陵容以歌喉调香得宠'],
+      ['emperor','duanfei','夫妻','端妃久病失宠'],
+      ['emperor','jingfei','夫妻','敬妃稳居妃位'],
+      ['emperor','qifei','夫妻','齐妃为三阿哥生母'],
+      ['emperor','caigui','夫妻','曹贵人生温宜公主'],
+      ['emperor','ye','夫妻 / 冷淡','叶澜依入宫为宁嫔'],
+      ['emperor','qigui','夫妻','祺贵人后期入局'],
+      ['emperor','ying','夫妻','瑛贵人卷入三阿哥风波'],
+      ['emperor','taohou','母子','太后是皇帝生母'],
+      ['emperor','guojunwang','兄弟 / 君臣','皇帝与果郡王关系微妙'],
+      ['emperor','sujin','君臣 / 御前','苏培盛长期随侍皇帝'],
+      ['emperor','nian','君臣 / 猜忌','年羹尧军功过盛终被清算'],
+      ['emperor','longkodo','君臣','隆科多牵动朝局旧事'],
+      ['emperor','sanage','父子','三阿哥弘时'],
+      ['emperor','siage','父子','四阿哥弘历'],
+      ['emperor','qianqing','御前空间','养心殿是皇帝权力中心'],
+      ['empress','chunyuan','姐妹 / 阴影','纯元皇后是宜修一生阴影'],
+      ['empress','jianqiu','主仆 / 心腹','剪秋执行中宫密令'],
+      ['empress','qifei','操控','齐妃多次受皇后利用'],
+      ['empress','fucha','阵营','富察贵人倾向皇后'],
+      ['empress','qigui','利用','祺贵人构陷甄嬛'],
+      ['empress','anlingrong','操控','安陵容后期受皇后控制'],
+      ['empress','jiangfuhai','主仆','景仁宫太监办事'],
+      ['empress','fuzhi','赐人试探','福子被赐入翊坤宫'],
+      ['empress','jingren','居所','景仁宫为中宫所在'],
+      ['huafei','nian','兄妹 / 外戚','年羹尧是华妃权势来源'],
+      ['huafei','caigui','主从 / 利用','曹贵人依附华妃'],
+      ['huafei','lixi','阵营','丽嫔为华妃党羽'],
+      ['huafei','songzhi','主仆','颂芝为华妃贴身侍女'],
+      ['huafei','zhou ninghai','主仆','周宁海协助翊坤宫办事'],
+      ['huafei','fuzhi','压迫','福子死于翊坤宫阴影'],
+      ['huafei','duanfei','旧怨','端妃曾被卷入害华妃不能有孕的局'],
+      ['huafei','huanyixiang','药物真相','欢宜香隐藏麝香伤孕'],
+      ['huafei','yikun','居所','翊坤宫为华妃居所'],
+      ['anlingrong','baojuan','主仆','宝鹃随侍安陵容'],
+      ['anlingrong','anbihuai','父女','安比槐是安陵容父亲'],
+      ['anlingrong','anmu','母女','安母境遇影响安陵容心性'],
+      ['anlingrong','shuhen','构陷线索','舒痕胶牵动祺贵人小产案'],
+      ['anlingrong','yanxi','居所','延禧宫为安陵容居所'],
+      ['meizhuang','wenshichu','知己 / 情感','眉庄与温实初彼此相知'],
+      ['meizhuang','juxiang','主仆','菊青随侍沈眉庄'],
+      ['meizhuang','meizhuangfather','父女','沈氏家族背景'],
+      ['meizhuang','taohou','敬重','眉庄侍奉太后得其喜爱'],
+      ['meizhuang','fangchunyi','同盟','淳常在亲近甄嬛眉庄'],
+      ['jingfei','longyue','养母女','敬妃抚养胧月'],
+      ['jingfei','caiyue','主仆','采月随侍敬妃'],
+      ['jingfei','xianfu','居所','咸福宫为敬妃居所'],
+      ['qifei','sanage','母子','齐妃为三阿哥生母'],
+      ['qifei','empress','依附','齐妃被皇后利用'],
+      ['caigui','wenyi','母女','曹贵人为温宜公主生母'],
+      ['caigui','huafei','依附','曹贵人依附华妃又暗中求生'],
+      ['guojunwang','huanbi','夫妻','浣碧嫁入果郡王府'],
+      ['guojunwang','mengjingxian','夫妻','孟静娴为果郡王嫡福晋'],
+      ['guojunwang','akeyun','主从','阿晋随侍果郡王'],
+      ['guojunwang','ye','被爱慕','叶澜依爱慕果郡王'],
+      ['guojunwang','lingshi','血缘隐线','灵犀身世牵动果郡王线'],
+      ['guojunwang','ganlusi','相遇','甘露寺清凉台线索'],
+      ['wenshichu','wei lin','师徒 / 同僚','卫临为温实初后辈'],
+      ['wenshichu','jiangcheng','同僚','太医院同僚'],
+      ['wenshichu','zhangmingshi','同僚','太医院医案相关'],
+      ['wenshichu','liuben','太医线索','刘畚卷入华妃药物案'],
+      ['wenshichu','shexiang','医药线索','麝香贯穿后宫伤孕暗线'],
+      ['taohou','zhuxi','主仆','竹息随侍太后'],
+      ['taohou','longkodo','旧情 / 朝局','隆科多与太后旧事牵动宗室'],
+      ['taohou','shoukang','居所','寿康宫为太后居所'],
+      ['yurao','shenbeile','夫妻','玉娆嫁慎郡王'],
+      ['qigui','guarjia','父女','鄂敏为祺贵人父亲'],
+      ['qigui','shuhen','构陷','舒痕胶成为构陷证据'],
+      ['fucha','empress','阵营','富察贵人倾向皇后'],
+      ['yuying','emperor','得宠 / 失宠','倚梅园冒名得宠'],
+      ['xia','huafei','冲突','夏冬春入宫即得罪华妃'],
+      ['fangruo','zhenhuan','教引','新入宫小主礼仪教导'],
+      ['sujin','jinxi','情感 / 互助','苏培盛与槿汐后期相互照应'],
+      ['sujin','songzhi2','上下级','小厦子在御前办事'],
+      ['sujin','xiaoyinzi','内廷差事','内廷太监网络'],
+      ['kangluhai','zhenhuan','背主','甄嬛失宠时康禄海离开碎玉轩'],
+      ['motai','zhenhuan','旧识风险','摩格觐见牵动甄嬛宫外旧事'],
+      ['motai','emperor','外部朝贡','准噶尔与朝廷关系'],
+      ['longkodo','zhangtingyu','朝堂同僚','前朝议政网络'],
+      ['zhangtingyu','eershi','朝堂同僚','前朝议政网络'],
+      ['nian','zhendao','前朝牵连','朝堂权力变动影响后宫家族'],
+      ['zhendao','guarjia','政敌','瓜尔佳氏构陷甄氏'],
+      ['suiyuxuan','liuzhu','居所','流朱侍奉碎玉轩'],
+      ['suiyuxuan','jinxi','居所','槿汐掌事碎玉轩'],
+      ['suiyuxuan','xiaoyunzi','居所','小允子在碎玉轩当差'],
+      ['yongshou','peier','居所','佩儿在永寿宫侍奉'],
+      ['jingren','jianqiu','居所','剪秋随侍景仁宫'],
+      ['yikun','songzhi','居所','颂芝随侍翊坤宫'],
+      ['yanxi','baojuan','居所','宝鹃随侍延禧宫'],
+      ['qianqing','sujin','御前','苏培盛在养心殿当差'],
+      ['ganlusi','jingbai','寺院','静白在甘露寺'],
+      ['ganlusi','ganlu','寺院','莫言在甘露寺'],
+      ['yuanmingyuan','siage','居所','四阿哥常处圆明园'],
+      ['yuanmingyuan','ying','旧线','瑛贵人原与王府园林线有关'],
+      ['huanyixiang','shexiang','药物关联','欢宜香中的麝香暗害华妃'],
+      ['liuben','huanyixiang','医案','刘畚知晓欢宜香线索'],
+      ['jiangcheng','shexiang','医案','太医掌握药物诊断'],
+      ['wei lin','zhenhuan','协助','卫临后期协助甄嬛'],
+      ['shengroup','zhenhuan','宫廷群像','placeholder']
+    ].filter(edge => edge[0] !== 'shengroup').map(([source, target, relation, event]) => ({ source, target, relation, event }));
+
+    const byId = new Map(nodes.map(node => [node.id, node]));
+    const edgeSet = new Set(edges.map(edge => `${edge.source}|${edge.target}|${edge.relation}`));
+    function link(source, target, relation, event) {
+      if (!byId.has(source) || !byId.has(target) || source === target) return;
+      const key = `${source}|${target}|${relation}`;
+      if (edgeSet.has(key)) return;
+      edgeSet.add(key);
+      edges.push({ source, target, relation, event });
+    }
+
+    const centralByCategory = {
+      '甄嬛一脉': 'zhenhuan',
+      '皇权中枢': 'emperor',
+      '皇后一党': 'empress',
+      '华妃一党': 'huafei',
+      '安陵容线': 'anlingrong',
+      '果郡王线': 'guojunwang',
+      '太医院': 'wenshichu',
+      '太后宗室': 'taohou',
+      '前朝': 'emperor',
+      '前朝外部': 'emperor',
+      '后宫嫔妃': 'emperor',
+      '宫人太监': 'sujin',
+      '甘露寺': 'ganlusi',
+      '宫殿对象': 'zhenhuan',
+      '关键物件': 'wenshichu'
+    };
+
+    nodes.forEach(node => {
+      const center = centralByCategory[node.category];
+      if (center && center !== node.id) link(center, node.id, '阵营关联', `${node.category}人物网络`);
+      if (node.palace === '碎玉轩') link('suiyuxuan', node.id, '宫殿关联', '居所与当差关系');
+      if (node.palace === '永寿宫') link('yongshou', node.id, '宫殿关联', '居所与当差关系');
+      if (node.palace === '景仁宫') link('jingren', node.id, '宫殿关联', '居所与当差关系');
+      if (node.palace === '翊坤宫') link('yikun', node.id, '宫殿关联', '居所与当差关系');
+      if (node.palace === '延禧宫') link('yanxi', node.id, '宫殿关联', '居所与当差关系');
+      if (node.palace === '咸福宫') link('xianfu', node.id, '宫殿关联', '居所与当差关系');
+      if (node.palace === '养心殿') link('qianqing', node.id, '御前关联', '御前当差与召见');
+      if (node.palace === '寿康宫') link('shoukang', node.id, '太后宫中', '太后身边关系');
+      if (node.palace === '甘露寺') link('ganlusi', node.id, '佛寺关联', '离宫修行线');
+      if (node.identity === '后宫妃嫔' && node.id !== 'zhenhuan') link('emperor', node.id, '后宫名分', '嫔妃与皇权关系');
+      if (node.identity === '朝臣') link('emperor', node.id, '君臣', '前朝权力网络');
+      if (node.identity === '太医') link('wenshichu', node.id, '太医院同僚', '医案与诊脉网络');
+      if (node.identity === '宫女' || node.identity === '太监') link('sujin', node.id, '内廷人事', '宫人太监网络');
+    });
+
+    const degree = new Map(nodes.map(node => [node.id, 0]));
+    edges.forEach(edge => {
+      degree.set(edge.source, (degree.get(edge.source) || 0) + 1);
+      degree.set(edge.target, (degree.get(edge.target) || 0) + 1);
+    });
+
+    const colors = {
+      '甄嬛一脉': palette.core,
+      '皇权中枢': palette.emperor,
+      '皇后一党': palette.empress,
+      '华妃一党': palette.hua,
+      '安陵容线': palette.an,
+      '果郡王线': palette.prince,
+      '太医院': palette.doctor,
+      '太后宗室': palette.violet,
+      '前朝': palette.court,
+      '前朝外部': palette.court,
+      '后宫嫔妃': '#c7a9ca',
+      '宫人太监': palette.servant,
+      '甘露寺': '#a6b684',
+      '宫殿对象': palette.palace,
+      '关键物件': '#b9b079'
+    };
+
+    const categoryOrder = ['全部', '甄嬛一脉', '皇权中枢', '皇后一党', '华妃一党', '安陵容线', '果郡王线', '太医院', '太后宗室', '前朝', '后宫嫔妃', '宫人太监', '宫殿对象'];
+    const coreIds = new Set(['zhenhuan','emperor','meizhuang','empress','huafei','anlingrong','guojunwang','wenshichu','duanfei','jingfei','taohou']);
+
+    const canvas = document.getElementById('sky');
+    const ctx = canvas.getContext('2d');
+    const tooltip = document.getElementById('tooltip');
+    const panel = document.getElementById('panel');
+    const search = document.getElementById('search');
+    const suggest = document.getElementById('suggest');
+    let w = 0, h = 0, dpr = 1;
+    let rotX = -0.22, rotY = 0.42;
+    let targetRotX = rotX, targetRotY = rotY;
+    let zoom = 1, targetZoom = 1;
+    let autoRotate = true;
+    let layered = false;
+    let filter = '全部';
+    let selected = 'zhenhuan';
+    let hover = null;
+    let dragging = false;
+    let lastX = 0, lastY = 0;
+    let screenNodes = [];
+
+    function hash(str) {
+      let n = 2166136261;
+      for (let i = 0; i < str.length; i++) {
+        n ^= str.charCodeAt(i);
+        n = Math.imul(n, 16777619);
+      }
+      return (n >>> 0) / 4294967295;
+    }
+
+    function resize() {
+      dpr = Math.min(window.devicePixelRatio || 1, 2);
+      w = window.innerWidth;
+      h = window.innerHeight;
+      canvas.width = Math.floor(w * dpr);
+      canvas.height = Math.floor(h * dpr);
+      canvas.style.width = `${w}px`;
+      canvas.style.height = `${h}px`;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+
+    function categoryIndex(category) {
+      const index = categoryOrder.indexOf(category);
+      return index < 0 ? 9 : index;
+    }
+
+    function basePosition(node) {
+      const deg = degree.get(node.id) || 1;
+      const cIndex = categoryIndex(node.category);
+      const band = coreIds.has(node.id) ? 68 : 175 + cIndex * 10;
+      const angle = cIndex * 0.56 + node.importance * 0.22 + hash(node.id) * 1.8;
+      const spiral = band + (hash(node.name + node.category) - 0.5) * 90 - Math.min(deg, 40) * 1.25;
+      const x = Math.cos(angle) * spiral + (hash(node.id + 'x') - 0.5) * 70;
+      const z = Math.sin(angle) * spiral + (hash(node.id + 'z') - 0.5) * 70;
+      const y = layered
+        ? (cIndex - 6) * 23 + (hash(node.id + 'layer') - 0.5) * 28
+        : Math.sin(angle * 1.7) * 88 + (hash(node.id + 'y') - 0.5) * 90;
+      if (node.id === 'zhenhuan') return { x: 0, y: -8, z: 0 };
+      if (node.id === 'emperor') return { x: 45, y: -18, z: 18 };
+      if (node.id === 'empress') return { x: -76, y: -18, z: 28 };
+      if (node.id === 'huafei') return { x: 78, y: 42, z: -38 };
+      if (node.id === 'meizhuang') return { x: -52, y: 45, z: -30 };
+      if (node.id === 'anlingrong') return { x: 14, y: 76, z: 56 };
+      if (node.id === 'guojunwang') return { x: 108, y: -58, z: 62 };
+      if (node.id === 'wenshichu') return { x: -104, y: 56, z: 58 };
+      return { x, y, z };
+    }
+
+    function project(node) {
+      const p = basePosition(node);
+      const cosY = Math.cos(rotY), sinY = Math.sin(rotY);
+      const cosX = Math.cos(rotX), sinX = Math.sin(rotX);
+      const x1 = p.x * cosY - p.z * sinY;
+      const z1 = p.x * sinY + p.z * cosY;
+      const y1 = p.y * cosX - z1 * sinX;
+      const z2 = p.y * sinX + z1 * cosX;
+      const depth = 760;
+      const scale = depth / (depth + z2);
+      const fit = Math.min(w, h) / 760;
+      return {
+        id: node.id,
+        x: w * 0.5 + x1 * scale * fit * 1.25 * zoom,
+        y: h * 0.5 + y1 * scale * fit * 1.25 * zoom,
+        z: z2,
+        scale
+      };
+    }
+
+    function isVisible(node) {
+      return filter === '全部' || node.category === filter;
+    }
+
+    function visibleAlpha(node) {
+      if (!isVisible(node)) return 0.055;
+      if (selected === node.id || hover === node.id) return 1;
+      if (selected) {
+        const related = edges.some(edge =>
+          (edge.source === selected && edge.target === node.id) ||
+          (edge.target === selected && edge.source === node.id)
+        );
+        if (related) return 0.92;
+        return filter === '全部' ? 0.42 : 0.7;
+      }
+      return 0.78;
+    }
+
+    function nodeRadius(node) {
+      const deg = degree.get(node.id) || 1;
+      const normal = 2.1 + Math.min(Math.sqrt(deg) * 0.36, 1.8);
+      const boosted = normal + (coreIds.has(node.id) ? 2.2 : node.importance >= 8 ? 1.1 : 0);
+      return Math.min(boosted, 6.2);
+    }
+
+    function drawBackground() {
+      ctx.clearRect(0, 0, w, h);
+      const g = ctx.createRadialGradient(w * 0.5, h * 0.5, 0, w * 0.5, h * 0.5, Math.max(w, h) * 0.72);
+      g.addColorStop(0, 'rgba(16, 13, 13, 0.48)');
+      g.addColorStop(0.48, 'rgba(6, 7, 9, 0.82)');
+      g.addColorStop(1, 'rgba(3, 3, 4, 1)');
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, w, h);
+
+      for (let i = 0; i < 260; i++) {
+        const x = hash(`star-x-${i}`) * w;
+        const y = hash(`star-y-${i}`) * h;
+        const r = 0.35 + hash(`star-r-${i}`) * 1.05;
+        const a = 0.16 + hash(`star-a-${i}`) * 0.38;
+        ctx.fillStyle = `rgba(241, 232, 204, ${a})`;
+        ctx.beginPath();
+        ctx.arc(x, y, r, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    function draw() {
+      rotX += (targetRotX - rotX) * 0.08;
+      rotY += (targetRotY - rotY) * 0.08;
+      zoom += (targetZoom - zoom) * 0.08;
+      if (autoRotate && !dragging) targetRotY += 0.0012;
+
+      drawBackground();
+      screenNodes = nodes.map(node => ({ ...project(node), node }));
+      const screenById = new Map(screenNodes.map(item => [item.id, item]));
+
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      edges.forEach(edge => {
+        const a = screenById.get(edge.source);
+        const b = screenById.get(edge.target);
+        if (!a || !b) return;
+        const sourceVisible = isVisible(a.node);
+        const targetVisible = isVisible(b.node);
+        const connectedFocus = selected && (edge.source === selected || edge.target === selected);
+        const connectedHover = hover && (edge.source === hover || edge.target === hover);
+        const alpha = connectedFocus || connectedHover ? 0.42 : (sourceVisible && targetVisible ? 0.13 : 0.035);
+        const grad = ctx.createLinearGradient(a.x, a.y, b.x, b.y);
+        const ca = colors[a.node.category] || palette.neutral;
+        const cb = colors[b.node.category] || palette.neutral;
+        grad.addColorStop(0, `${ca}${Math.floor(alpha * 255).toString(16).padStart(2, '0')}`);
+        grad.addColorStop(0.72, `${cb}${Math.floor(alpha * 160).toString(16).padStart(2, '0')}`);
+        grad.addColorStop(1, 'rgba(255,255,255,0.01)');
+        ctx.strokeStyle = grad;
+        ctx.lineWidth = connectedFocus || connectedHover ? 0.9 : 0.45;
+        ctx.beginPath();
+        ctx.moveTo(a.x, a.y);
+        ctx.lineTo(b.x, b.y);
+        ctx.stroke();
+      });
+      ctx.restore();
+
+      const ordered = screenNodes.slice().sort((a, b) => a.z - b.z);
+      ordered.forEach(item => {
+        const node = item.node;
+        const alpha = visibleAlpha(node);
+        const color = colors[node.category] || palette.neutral;
+        const r = nodeRadius(node) * (0.82 + item.scale * 0.22);
+        const active = selected === node.id || hover === node.id;
+        ctx.save();
+        ctx.globalAlpha = alpha;
+        ctx.globalCompositeOperation = 'lighter';
+        const glow = ctx.createRadialGradient(item.x, item.y, 0, item.x, item.y, r * (active ? 5.4 : 3.5));
+        glow.addColorStop(0, color);
+        glow.addColorStop(0.18, `${color}cc`);
+        glow.addColorStop(0.55, `${color}38`);
+        glow.addColorStop(1, `${color}00`);
+        ctx.fillStyle = glow;
+        ctx.beginPath();
+        ctx.arc(item.x, item.y, r * (active ? 5.4 : 3.5), 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        ctx.arc(item.x, item.y, r, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = 'rgba(255, 250, 222, 0.88)';
+        ctx.beginPath();
+        ctx.arc(item.x - r * 0.22, item.y - r * 0.22, Math.max(0.7, r * 0.32), 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+
+        if ((coreIds.has(node.id) || active) && isVisible(node)) {
+          ctx.save();
+          ctx.globalAlpha = active ? 0.95 : 0.76;
+          ctx.fillStyle = 'rgba(243,238,226,0.88)';
+          ctx.font = `${active ? 13 : 12}px system-ui, -apple-system, BlinkMacSystemFont, sans-serif`;
+          ctx.textAlign = 'center';
+          ctx.fillText(node.name, item.x, item.y - r - 9);
+          ctx.restore();
+        }
+      });
+
+      requestAnimationFrame(draw);
+    }
+
+    function pick(x, y) {
+      let best = null;
+      let bestD = Infinity;
+      for (const item of screenNodes) {
+        if (!isVisible(item.node)) continue;
+        const r = Math.max(9, nodeRadius(item.node) + 5);
+        const d = Math.hypot(item.x - x, item.y - y);
+        if (d < r && d < bestD) {
+          best = item;
+          bestD = d;
+        }
+      }
+      return best;
+    }
+
+    function focusNode(id) {
+      if (!byId.has(id)) return;
+      selected = id;
+      hover = null;
+      const node = byId.get(id);
+      if (filter !== '全部' && node.category !== filter) setFilter('全部');
+      document.getElementById('focusName').textContent = node.name;
+      openPanel(node);
+      renderImportant();
+      renderTabs();
+    }
+
+    function openPanel(node) {
+      const rels = edges
+        .filter(edge => edge.source === node.id || edge.target === node.id)
+        .map(edge => {
+          const otherId = edge.source === node.id ? edge.target : edge.source;
+          const other = byId.get(otherId);
+          return { other, edge };
+        })
+        .filter(item => item.other)
+        .sort((a, b) => (degree.get(b.other.id) || 0) - (degree.get(a.other.id) || 0))
+        .slice(0, 14);
+
+      document.getElementById('pName').textContent = node.name;
+      document.getElementById('pSub').textContent = `${node.rank} · ${node.category}`;
+      document.getElementById('pBadges').innerHTML = [
+        `职位：${node.position}`,
+        `名分：${node.rank}`,
+        `身份：${node.identity}`,
+        `宫殿：${node.palace}`,
+        `称号：${node.alias}`
+      ].map(text => `<span class="badge">${text}</span>`).join('');
+      document.getElementById('pBio').textContent = node.bio;
+      document.getElementById('pRelations').innerHTML = rels.length
+        ? rels.map(({ other, edge }) => `<div class="rel-item"><b>${other.name}</b>：${edge.relation}<br>${edge.event}</div>`).join('')
+        : '<div class="rel-item">暂无直接关系。</div>';
+      panel.classList.add('open');
+    }
+
+    function renderTabs() {
+      const root = document.getElementById('tabs');
+      root.innerHTML = categoryOrder.map(category => (
+        `<button class="tab${category === filter ? ' active' : ''}" data-category="${category}">${category}</button>`
+      )).join('');
+      root.querySelectorAll('button').forEach(btn => {
+        btn.addEventListener('click', () => setFilter(btn.dataset.category));
+      });
+    }
+
+    function setFilter(category) {
+      filter = category;
+      renderTabs();
+      renderImportant();
+    }
+
+    function renderImportant() {
+      const list = nodes
+        .filter(node => filter === '全部' || node.category === filter)
+        .sort((a, b) => {
+          const da = degree.get(a.id) || 0;
+          const db = degree.get(b.id) || 0;
+          if (db !== da) return db - da;
+          return b.importance - a.importance;
+        })
+        .slice(0, 10);
+      document.getElementById('important').innerHTML = list.map(node => {
+        const color = colors[node.category] || palette.neutral;
+        const active = selected === node.id ? ` style="color:${palette.core}"` : '';
+        return `<button data-id="${node.id}"${active}><span class="dot" style="background:${color};color:${color}"></span><span>${node.name} · ${degree.get(node.id) || 0}</span></button>`;
+      }).join('');
+      document.querySelectorAll('#important button').forEach(btn => {
+        btn.addEventListener('click', () => focusNode(btn.dataset.id));
+      });
+    }
+
+    function updateSuggestions() {
+      const q = search.value.trim().toLowerCase();
+      if (!q) {
+        suggest.style.display = 'none';
+        return;
+      }
+      const list = nodes.filter(node => [
+        node.name, node.alias, node.category, node.rank, node.role, node.identity, node.palace, node.position
+      ].some(value => String(value).toLowerCase().includes(q))).slice(0, 14);
+      suggest.innerHTML = list.map(node => (
+        `<button data-id="${node.id}"><strong>${node.name}</strong><small>${node.rank} · ${node.category} · ${node.position}</small></button>`
+      )).join('');
+      suggest.style.display = list.length ? 'block' : 'none';
+      suggest.querySelectorAll('button').forEach(btn => {
+        btn.addEventListener('click', () => {
+          search.value = '';
+          suggest.style.display = 'none';
+          focusNode(btn.dataset.id);
+        });
+      });
+    }
+
+    canvas.addEventListener('pointerdown', event => {
+      dragging = true;
+      lastX = event.clientX;
+      lastY = event.clientY;
+      canvas.classList.add('dragging');
+      canvas.setPointerCapture(event.pointerId);
+    });
+
+    canvas.addEventListener('pointermove', event => {
+      const hit = pick(event.clientX, event.clientY);
+      hover = hit ? hit.id : null;
+      if (hit && !dragging) {
+        tooltip.style.display = 'block';
+        tooltip.style.left = `${event.clientX + 14}px`;
+        tooltip.style.top = `${event.clientY + 12}px`;
+        tooltip.innerHTML = `<b>${hit.node.name}</b><br>${hit.node.rank} · ${hit.node.category}<br>${hit.node.alias}`;
+      } else {
+        tooltip.style.display = 'none';
+      }
+      if (!dragging) return;
+      const dx = event.clientX - lastX;
+      const dy = event.clientY - lastY;
+      targetRotY += dx * 0.006;
+      targetRotX += dy * 0.005;
+      targetRotX = Math.max(-1.15, Math.min(1.15, targetRotX));
+      lastX = event.clientX;
+      lastY = event.clientY;
+    });
+
+    canvas.addEventListener('pointerup', event => {
+      dragging = false;
+      canvas.classList.remove('dragging');
+      canvas.releasePointerCapture(event.pointerId);
+      const hit = pick(event.clientX, event.clientY);
+      if (hit) focusNode(hit.id);
+    });
+
+    canvas.addEventListener('pointerleave', () => {
+      hover = null;
+      tooltip.style.display = 'none';
+    });
+
+    canvas.addEventListener('wheel', event => {
+      event.preventDefault();
+      const direction = event.deltaY > 0 ? -1 : 1;
+      targetZoom = Math.max(0.58, Math.min(2.25, targetZoom + direction * 0.09));
+    }, { passive: false });
+
+    document.getElementById('autoBtn').addEventListener('click', event => {
+      autoRotate = !autoRotate;
+      event.currentTarget.textContent = autoRotate ? '停止旋转' : '开始旋转';
+      event.currentTarget.classList.toggle('active', autoRotate);
+    });
+
+    document.getElementById('layoutBtn').addEventListener('click', event => {
+      layered = !layered;
+      event.currentTarget.textContent = layered ? '星云布局' : '分层布局';
+      event.currentTarget.classList.toggle('active', layered);
+    });
+
+    document.getElementById('resetBtn').addEventListener('click', () => {
+      targetRotX = -0.22;
+      targetRotY = 0.42;
+      targetZoom = 1;
+      setFilter('全部');
+      focusNode('zhenhuan');
+    });
+
+    document.getElementById('closePanel').addEventListener('click', () => panel.classList.remove('open'));
+    search.addEventListener('input', updateSuggestions);
+    window.addEventListener('resize', resize);
+    document.addEventListener('click', event => {
+      if (!event.target.closest('.search')) suggest.style.display = 'none';
+    });
+
+    document.getElementById('nodeCount').textContent = `${nodes.length} 个`;
+    document.getElementById('edgeCount').textContent = `${edges.length} 条`;
+    renderTabs();
+    renderImportant();
+    resize();
+    focusNode('zhenhuan');
+    requestAnimationFrame(draw);
+  </script>
+</body>
+</html>
